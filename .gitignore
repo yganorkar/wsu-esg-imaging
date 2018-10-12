@@ -1,0 +1,68 @@
+# ------------------------------------------------------------------------------ #
+# Java defaults (https://github.com/github/gitignore/blob/master/Java.gitignore) #
+# ------------------------------------------------------------------------------ #
+*.class
+
+# Package Files #
+*.jar
+*.war
+*.ear
+
+
+# ------------------------------------------------------------------------------------------- #
+# Eclipse-specific (https://github.com/github/gitignore/blob/master/Global/Eclipse.gitignore) #
+# ------------------------------------------------------------------------------------------- #
+*.pydevproject
+.metadata
+bin/**
+tmp/**
+tmp/**/*
+*.tmp
+*.bak
+*.swp
+*~.nib
+local.properties
+.settings/
+.loadpath
+
+## Online can't make up their mind if these should be included
+## Ignoring them is technically 'more correct' but doing so causes more
+##   issues when switching between branches with different dependencies
+#.project
+#.classpath
+
+# External tool builders
+.externalToolBuilders/
+
+# Locally stored "Eclipse launch configurations"
+*.launch
+
+# CDT-specific
+.cproject
+
+# PDT-specific
+.buildpath
+
+
+# --------------- #
+# Studio-specific #
+# --------------- #
+target/
+.mule/**
+.mule/**/*
+velocity.log
+
+## Maybe include but docs about these two are from 2015
+#.studio
+#flows/
+
+
+# ----------- #
+# OS-specific #
+# ----------- #
+
+# Windows
+thumbs.db
+
+# Mac
+.DS_Store
