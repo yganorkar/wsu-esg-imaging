@@ -1,11 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<mule xmlns:validation="http://www.mulesoft.org/schema/mule/validation" xmlns:sftp="http://www.mulesoft.org/schema/mule/sftp"
-	xmlns:http="http://www.mulesoft.org/schema/mule/http"
-	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:validation="http://www.mulesoft.org/schema/mule/validation"
+	xmlns:sftp="http://www.mulesoft.org/schema/mule/sftp"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
 http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
 http://www.mulesoft.org/schema/mule/sftp http://www.mulesoft.org/schema/mule/sftp/current/mule-sftp.xsd
-http://www.mulesoft.org/schema/mule/validation http://www.mulesoft.org/schema/mule/validation/current/mule-validation.xsd">
+http://www.mulesoft.org/schema/mule/validation http://www.mulesoft.org/schema/mule/validation/current/mule-validation.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
 	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="6d641494-aea5-456a-9107-0aab053ed04c" basePath="/" >
 		<http:listener-connection host="0.0.0.0" port="8081" />
 	</http:listener-config>
@@ -20,12 +21,32 @@ http://www.mulesoft.org/schema/mule/validation http://www.mulesoft.org/schema/mu
 	<flow name="wsu-esg-imagingFlow" doc:id="e414d6e7-23ac-4b28-8070-0e91bdcd7203" >
 		<http:listener doc:name="Listener" doc:id="6b9d4072-6882-44df-aa5f-83e6987db960" config-ref="HTTP_Listener_config" path="/into"/>
 		<flow-ref doc:name="INTO::Leaf=ListPDFFiles" doc:id="0e6afdd0-3a35-48ab-ab58-0261871d8e71" name="INTO::Leaf=ListPDFFiles"/>
-		<logger level="INFO" doc:name="Logger" doc:id="b248823b-e91e-48d3-94d2-4d375ac02bc9" message="${sftp.username}"/>
+		<flow-ref doc:name="INTO::Leaf=ForEach=ListFileNames" doc:id="1512cbd2-eea7-450b-a975-27a5bf949052" name="INTO::Leaf=ForEach=ListFileNames"/>
 	</flow>
 	<sub-flow name="INTO::Leaf=ListPDFFiles" doc:id="54839f00-34ca-428a-8b92-3b47d84cda5c" >
 		<sftp:list doc:name="PDF Files in the directory" doc:id="b091bbdb-b213-4d3a-be5a-e9b1f68481fc" config-ref="SFTP_Config" directoryPath="${imaging_into_path}">
 			<sftp:matcher filenamePattern="*.pdf" />
 		</sftp:list>
 		<validation:is-not-empty-collection doc:name="Is not empty collection" doc:id="279539ce-8f5b-4955-a2c5-fc2c322a4fa0" />
+	</sub-flow>
+	<sub-flow name="INTO::Leaf=ForEach=ListFileNames" doc:id="949fba08-ed74-4780-b420-8218e7a0fc7b" >
+		<foreach doc:name="For Each File in Source Directory" doc:id="48e2af9f-ca8d-4fc3-b5cb-096c183a7dc6" collection="payload.*payload">
+			<ee:transform doc:name="Transform Message" doc:id="604e57fb-6641-40d5-9657-b11185086f08" >
+				<ee:message >
+					<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+
+---
+//files : [{ file: {studentId} }]
+{
+	studentId: ((vars.rootMessage.payload[vars.counter-1].attributes["fileName"] splitBy("."))[0] splitBy("_"))[0],
+	timestamp: ((vars.rootMessage.payload[vars.counter-1].attributes["fileName"] splitBy("."))[0] splitBy("_"))[1],
+	category: ((vars.rootMessage.payload[vars.counter-1].attributes["fileName"] splitBy("."))[0] splitBy("_"))[2],
+	subcategory: ((vars.rootMessage.payload[vars.counter-1].attributes["fileName"] splitBy("."))[0] splitBy("_"))[3]
+}]]></ee:set-payload>
+				</ee:message>
+			</ee:transform>
+			<logger level="INFO" doc:name="Logger" doc:id="b63e79bd-85e2-4651-8204-4187981191c7" message="#[payload.studentId]" />
+		</foreach>
 	</sub-flow>
 </mule>
