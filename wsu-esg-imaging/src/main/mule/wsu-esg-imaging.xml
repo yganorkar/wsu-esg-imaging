@@ -18,6 +18,9 @@ http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/
 			</sftp:preferred-authentication-methods>
 		</sftp:connection>
 	</sftp:config>
+	<http:request-config name="HTTP_Request_configuration_Jasen" doc:name="HTTP Request configuration" doc:id="fecaccff-2ea3-4675-a692-ee640eaadfd5" >
+		<http:request-connection host="localhost" port="8082" />
+	</http:request-config>
 	<flow name="wsu-esg-imagingFlow" doc:id="e414d6e7-23ac-4b28-8070-0e91bdcd7203" >
 		<http:listener doc:name="Listener" doc:id="6b9d4072-6882-44df-aa5f-83e6987db960" config-ref="HTTP_Listener_config" path="/into"/>
 		<flow-ref doc:name="INTO::Leaf=ListPDFFiles" doc:id="0e6afdd0-3a35-48ab-ab58-0261871d8e71" name="INTO::Leaf=ListPDFFiles"/>
@@ -30,23 +33,52 @@ http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/
 		<validation:is-not-empty-collection doc:name="Is not empty collection" doc:id="279539ce-8f5b-4955-a2c5-fc2c322a4fa0" />
 	</sub-flow>
 	<sub-flow name="INTO::Leaf=ForEach=ListFileNames" doc:id="949fba08-ed74-4780-b420-8218e7a0fc7b" >
-		<foreach doc:name="For Each File in Source Directory" doc:id="48e2af9f-ca8d-4fc3-b5cb-096c183a7dc6" collection="payload.*payload">
+		<foreach doc:name="For Each File in Source Directory" doc:id="48e2af9f-ca8d-4fc3-b5cb-096c183a7dc6">
 			<ee:transform doc:name="Transform Message" doc:id="604e57fb-6641-40d5-9657-b11185086f08" >
 				<ee:message >
 					<ee:set-payload ><![CDATA[%dw 2.0
-output application/json
+output multipart/form-data
 
+boundary = 'ajkshdkjhsakjdhsa'
+
+var fileNameInfo = vars.rootMessage.payload[vars.counter-1].attributes["fileName"] splitBy (".")
+var fileName = fileNameInfo[0]
+
+var wsuid = (fileName splitBy ("_"))[0]
+var category = (fileName splitBy ("_"))[2]
+var subcategory = (fileName splitBy ("_"))[3]
 ---
-//files : [{ file: {studentId} }]
 {
-	studentId: ((vars.rootMessage.payload[vars.counter-1].attributes["fileName"] splitBy("."))[0] splitBy("_"))[0],
-	timestamp: ((vars.rootMessage.payload[vars.counter-1].attributes["fileName"] splitBy("."))[0] splitBy("_"))[1],
-	category: ((vars.rootMessage.payload[vars.counter-1].attributes["fileName"] splitBy("."))[0] splitBy("_"))[2],
-	subcategory: ((vars.rootMessage.payload[vars.counter-1].attributes["fileName"] splitBy("."))[0] splitBy("_"))[3]
+	parts : {
+		fileName: {
+			headers: {
+				"Content-Disposition" : {
+					"name" : fileName,
+					"filename" : fileNameInfo[0] ++ "." ++ fileNameInfo[1]
+				},
+				"Content-Type" : "application/pdf" 
+			},
+			content : vars.rootMessage.payload[vars.counter-1].payload
+		},
+		"JSON_attributes" : {
+			headers : {
+				"Content-Type" : "application/json"
+			},
+			content : {
+				"WSUID" : wsuid,
+				"ImgType" : "SFS",
+				"DocumentType" : category,
+				"SubDocumentType" : subcategory,
+				"AidYear" : "2018",
+				"Owner" : "ESG",
+				"Campus" : "PULLMAN"
+			}
+		}
+	}
 }]]></ee:set-payload>
 				</ee:message>
 			</ee:transform>
-			<logger level="INFO" doc:name="Logger" doc:id="b63e79bd-85e2-4651-8204-4187981191c7" message="#[payload.studentId]" />
+			<logger level="INFO" doc:name="Logger" doc:id="b63e79bd-85e2-4651-8204-4187981191c7" message="#[payload]" />
 		</foreach>
 	</sub-flow>
 </mule>
