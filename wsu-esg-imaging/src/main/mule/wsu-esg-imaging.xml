@@ -37,16 +37,23 @@ http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/
 			<ee:transform doc:name="Transform Message" doc:id="604e57fb-6641-40d5-9657-b11185086f08" >
 				<ee:message >
 					<ee:set-payload ><![CDATA[%dw 2.0
+import * from dw::core::Strings
 output multipart/form-data
 
-boundary = 'ajkshdkjhsakjdhsa'
+boundary = 'rvNVizIbWeKUMEGfjbJN'
 
 var fileNameInfo = vars.rootMessage.payload[vars.counter-1].attributes["fileName"] splitBy (".")
-var fileName = fileNameInfo[0]
 
-var wsuid = (fileName splitBy ("_"))[0]
-var category = (fileName splitBy ("_"))[2]
-var subcategory = (fileName splitBy ("_"))[3]
+var fileName = fileNameInfo[0]
+var fileDetailsArray = fileName splitBy ("_")
+var wsuid = fileDetailsArray[0]
+var category = capitalize(fileDetailsArray[2])
+var subcategory = capitalize(fileDetailsArray[3])
+
+
+	
+
+
 ---
 {
 	parts : {
@@ -78,7 +85,12 @@ var subcategory = (fileName splitBy ("_"))[3]
 }]]></ee:set-payload>
 				</ee:message>
 			</ee:transform>
-			<logger level="INFO" doc:name="Logger" doc:id="b63e79bd-85e2-4651-8204-4187981191c7" message="#[payload]" />
+			<async doc:name="Async" doc:id="9a7c465f-be54-4096-a1b2-9997fa4b64fc" >
+				<http:request method="POST" doc:name="Request" doc:id="50449a63-6fbf-43eb-a7b1-47c91c44a43b" config-ref="HTTP_Request_configuration_Jasen" path="/image" >
+					<http:body ><![CDATA[output application/json --- payload]]></http:body>
+				</http:request>
+			</async>
+			<logger level="INFO" doc:name="Logger" doc:id="b63e79bd-85e2-4651-8204-4187981191c7" message="blah blah"/>
 		</foreach>
 	</sub-flow>
 </mule>
