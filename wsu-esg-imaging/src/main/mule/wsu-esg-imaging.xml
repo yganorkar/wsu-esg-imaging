@@ -18,8 +18,11 @@ http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/
 			</sftp:preferred-authentication-methods>
 		</sftp:connection>
 	</sftp:config>
-	<http:request-config name="HTTP_Request_configuration_Jasen" doc:name="HTTP Request configuration" doc:id="fecaccff-2ea3-4675-a692-ee640eaadfd5" >
-		<http:request-connection host="localhost" port="8082" />
+	<http:request-config name="HTTPS_Cloudhub_TESTENV" doc:name="HTTP Request configuration" doc:id="fecaccff-2ea3-4675-a692-ee640eaadfd5" >
+		<http:request-connection host="wsu-esg-imaging-test.us-w2.cloudhub.io" protocol="HTTPS"/>
+	</http:request-config>
+	<http:request-config name="HTTP_Request_configuration" doc:name="HTTP Request configuration" doc:id="36e21a0c-5c77-4851-ac1b-0331a2f7bea9" >
+		<http:request-connection host="localhost" port="8081"/>
 	</http:request-config>
 	<flow name="wsu-esg-imagingFlow" doc:id="e414d6e7-23ac-4b28-8070-0e91bdcd7203" >
 		<http:listener doc:name="Listener" doc:id="6b9d4072-6882-44df-aa5f-83e6987db960" config-ref="HTTP_Listener_config" path="/into"/>
@@ -42,16 +45,20 @@ output multipart/form-data
 
 boundary = 'rvNVizIbWeKUMEGfjbJN'
 
+fun setSubCategory(fileDetailsArray) = 
+(
+	if(sizeOf(fileDetailsArray) == 4) capitalize(fileDetailsArray[3])
+	else capitalize(fileDetailsArray[3]) ++ " " ++ capitalize(fileDetailsArray[4])
+)
+
+
 var fileNameInfo = vars.rootMessage.payload[vars.counter-1].attributes["fileName"] splitBy (".")
 
 var fileName = fileNameInfo[0]
 var fileDetailsArray = fileName splitBy ("_")
 var wsuid = fileDetailsArray[0]
 var category = capitalize(fileDetailsArray[2])
-var subcategory = capitalize(fileDetailsArray[3])
-
-
-	
+var subcategory = setSubCategory(fileDetailsArray)
 
 
 ---
@@ -78,19 +85,23 @@ var subcategory = capitalize(fileDetailsArray[3])
 				"SubDocumentType" : subcategory,
 				"AidYear" : "2018",
 				"Owner" : "ESG",
-				"Campus" : "PULLMAN"
+				"Campus" : "PULLMAN",
+				"BatchIndex":""
 			}
 		}
 	}
 }]]></ee:set-payload>
 				</ee:message>
 			</ee:transform>
-			<async doc:name="Async" doc:id="9a7c465f-be54-4096-a1b2-9997fa4b64fc" >
-				<http:request method="POST" doc:name="Request" doc:id="50449a63-6fbf-43eb-a7b1-47c91c44a43b" config-ref="HTTP_Request_configuration_Jasen" path="/image" >
-					<http:body ><![CDATA[output application/json --- payload]]></http:body>
-				</http:request>
-			</async>
+			<flow-ref doc:name="Flow Reference" doc:id="c201f135-eeb0-4eb6-9391-aafc20fcb4f2" name="INTO::Leaf=POSTPayloadToAPI"/>
 			<logger level="INFO" doc:name="Logger" doc:id="b63e79bd-85e2-4651-8204-4187981191c7" message="blah blah"/>
 		</foreach>
+	</sub-flow>
+	<sub-flow name="INTO::Leaf=POSTPayloadToAPI" doc:id="945e6c0b-bbbd-42d9-8a09-581dbc0b041b" >
+		<async doc:name="Async" doc:id="9a7c465f-be54-4096-a1b2-9997fa4b64fc">
+				<http:request method="POST" doc:name="Request" doc:id="50449a63-6fbf-43eb-a7b1-47c91c44a43b" config-ref="HTTPS_Cloudhub_TESTENV" path="/imaging">
+				</http:request>
+			<logger level="INFO" doc:name="Logger" doc:id="67c95c8a-47a9-4036-86ea-69803d9f3d7d" message="#[attributes.statusCode]"/>
+			</async>
 	</sub-flow>
 </mule>
